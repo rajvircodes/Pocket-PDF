@@ -1,0 +1,11 @@
+{
+  "name": "pocket-pdf",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @pocket-pdf/web\" \"npm run dev -w @pocket-pdf/api\"",
+    "build": "npm run build -w @pocket-pdf/web && npm run build -w @pocket-pdf/api",
+    "start": "npm run start -w @pocket-pdf/api"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" }
+}
