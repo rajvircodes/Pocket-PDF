@@ -4,7 +4,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { processConversion } from "../services/pdf.service.js";
-import { prisma } from "../lib/prisma.js";
+
 
 const root = path.resolve(process.env.UPLOAD_DIR ?? "uploads");
 await fs.mkdir(root, { recursive: true });
@@ -24,22 +24,6 @@ const upload = multer({
     ),
 });
 export const router = Router();
-
-
-router.get('/db-test', async (_req, res, next) => {
-  try {
-    const count = await prisma.conversion.count();
-
-    res.json({
-      ok: true,
-      database: 'connected',
-      conversions: count,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 
 router.post("/:tool", upload.array("files", 20), async (req, res, next) => {
   const files = (req.files as Express.Multer.File[]) ?? [];
