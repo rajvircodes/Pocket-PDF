@@ -4,6 +4,14 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { processConversion } from "../services/pdf.service.js";
+import { validateBody, validateParams } from '../middleware/validate.ts'
+import { conversionParamsSchema } from '../validation/conversion.schema.js';
+
+import {
+  conversionBodySchema,
+  conversionParamsSchema,
+} from '../validation/conversion.schema.js';
+
 
 
 const root = path.resolve(process.env.UPLOAD_DIR ?? "uploads");
@@ -25,7 +33,9 @@ const upload = multer({
 });
 export const router = Router();
 
-router.post("/:tool", upload.array("files", 20), async (req, res, next) => {
+router.post("/:tool", validateParams(conversionParamsSchema),
+    validateBody(conversionBodySchema),
+ upload.array("files", 20), async (req, res, next) => {
   const files = (req.files as Express.Multer.File[]) ?? [];
   try {
     if (!files.length)
