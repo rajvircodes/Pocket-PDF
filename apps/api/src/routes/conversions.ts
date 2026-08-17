@@ -1,9 +1,14 @@
 import { Router } from "express";
 import fs from "node:fs/promises";
 
+import { prisma } from "../lib/prisma.js";
 import { processConversion } from "../services/pdf.service.js";
 import { upload } from "../config/upload.js";
-import { validateBody, validateParams } from "../middleware/validate.js";
+import { requireAuth } from "../middleware/auth.js";
+import {
+  validateBody,
+  validateParams,
+} from "../middleware/validate.js";
 import {
   conversionBodySchema,
   conversionParamsSchema,
@@ -11,13 +16,45 @@ import {
 
 export const router = Router();
 
+router.get("/", requireAuth, async (req, res, next) => {
+  try {
+    const conversions = await prisma.conversion.findMany({
+      where: {
+        userId: req.userId!,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+  id: true,
+  tool: true,
+  status: true,
+  originalFilename: true,
+  filename: true,
+  fileSize: true,
+  createdAt: true,
+  completedAt: true,
+},
+    });
+
+    res.json({
+      success: true,
+      conversions,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post(
   "/:tool",
+  requireAuth,
   validateParams(conversionParamsSchema),
   validateBody(conversionBodySchema),
   upload.array("files", 20),
   async (req, res, next) => {
-    const files = (req.files as Express.Multer.File[]) ?? [];
+    const files =
+      (req.files as Express.Multer.File[]) ?? [];
 
     try {
       if (!files.length) {
@@ -32,18 +69,43 @@ router.post(
         req.body,
       );
 
-      res.download(result.path, result.name, async () => {
-        await Promise.all([
-          ...files.map((file) =>
-            fs.rm(file.path, { force: true }),
-          ),
-          fs.rm(result.path, { force: true }),
-        ]);
-      });
+     await prisma.conversion.create({
+  data: {
+    tool: req.params.tool,
+    status: "complete",
+    originalFilename: files[0]?.originalname,
+    filename: result.name,
+    fileSize: files.reduce(
+      (total, file) => total + file.size,
+      0,
+    ),
+    completedAt: new Date(),
+    userId: req.userId!,
+  },
+});
+
+      res.download(
+        result.path,
+        result.name,
+        async () => {
+          await Promise.all([
+            ...files.map((file) =>
+              fs.rm(file.path, {
+                force: true,
+              }),
+            ),
+            fs.rm(result.path, {
+              force: true,
+            }),
+          ]);
+        },
+      );
     } catch (error) {
       await Promise.all(
         files.map((file) =>
-          fs.rm(file.path, { force: true }),
+          fs.rm(file.path, {
+            force: true,
+          }),
         ),
       );
 

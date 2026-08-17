@@ -3,14 +3,18 @@ import cors from "cors";
 import express from "express";
 import { router } from "./routes/conversions.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { authRouter } from "./routes/auth.js";
+import cookieParser from "cookie-parser";
 
 const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") ?? true }));
 app.use(express.json({ limit: "2mb" }));
+app.use(cookieParser());
 app.get("/health", (_req, res) =>
   res.json({ ok: true, service: "pocket-pdf-api" }),
 );
 app.use("/api/conversions", router);
+app.use("/api/auth", authRouter);
 
 
 app.use(errorHandler);

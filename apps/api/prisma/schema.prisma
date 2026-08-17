@@ -7,10 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  conversion Conversion[]
+}
+
 model Conversion {
-  id        String   @id @default(cuid())
-  tool      String
-  status    String   @default("complete")
-  filename  String
-  createdAt DateTime @default(now())
+  id               String    @id @default(cuid())
+  tool             String
+  status           String    @default("complete")
+  originalFilename String?
+  filename         String
+  fileSize         Int?
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
 }
