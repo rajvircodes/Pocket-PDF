@@ -30,6 +30,23 @@ export const conversionBodySchema = z.record(
   z.unknown(),
 );
 
+
+
 export type ConversionTool = z.infer<
   typeof conversionToolSchema
 >;
+
+export const paginationSchema = z.object({
+  page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(1),
+
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .default(10),
+});

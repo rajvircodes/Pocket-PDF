@@ -47,3 +47,29 @@ export const validateBody = (
     }
   };
 };
+
+
+export const validateQuery = (
+  schema: ZodType,
+): RequestHandler => {
+  return (req, _res, next) => {
+    try {
+      req.query = schema.parse(req.query);
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        next(
+          new AppError(
+            error.issues
+              .map((issue) => issue.message)
+              .join(", "),
+            400,
+          ),
+        );
+        return;
+      }
+
+      next(error);
+    }
+  };
+};

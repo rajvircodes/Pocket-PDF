@@ -8,43 +8,78 @@ import { requireAuth } from "../middleware/auth.js";
 import {
   validateBody,
   validateParams,
+  validateQuery,
 } from "../middleware/validate.js";
 import {
   conversionBodySchema,
   conversionParamsSchema,
+  paginationSchema,
 } from "../validation/conversion.schema.js";
 
 export const router = Router();
 
-router.get("/", requireAuth, async (req, res, next) => {
-  try {
-    const conversions = await prisma.conversion.findMany({
-      where: {
-        userId: req.userId!,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-  id: true,
-  tool: true,
-  status: true,
-  originalFilename: true,
-  filename: true,
-  fileSize: true,
-  createdAt: true,
-  completedAt: true,
-},
-    });
+router.get(
+  "/",
+  requireAuth,
+  validateQuery(paginationSchema),
+  async (req, res, next) => {
+    try {
+      const page = req.query.page as number;
+      const limit = req.query.limit as number;
 
-    res.json({
-      success: true,
-      conversions,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      const skip = (page - 1) * limit;
+
+      const [conversions, total] =
+        await Promise.all([
+          prisma.conversion.findMany({
+            where: {
+              userId: req.userId!,
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+            skip,
+            take: limit,
+            select: {
+              id: true,
+              tool: true,
+              status: true,
+              originalFilename: true,
+              filename: true,
+              fileSize: true,
+              createdAt: true,
+              completedAt: true,
+            },
+          }),
+
+          prisma.conversion.count({
+            where: {
+              userId: req.userId!,
+            },
+          }),
+        ]);
+
+      const totalPages = Math.ceil(
+        total / limit,
+      );
+
+      res.json({
+        success: true,
+        data: {
+          conversions,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.post(
   "/:tool",
